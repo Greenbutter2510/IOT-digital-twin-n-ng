@@ -280,3 +280,11 @@ Quy ước: sau mỗi lần cập nhật project, thêm một mục mới vào p
 - **Nội dung:** Khởi động lại Digital Twin Server và kiểm tra toàn bộ tuyến `private MQTT -> HMAC/anti-replay -> Digital Twin snapshot -> ThingsBoard Cloud` bằng ba telemetry có chữ ký hợp lệ.
   **Lý do:** Xác nhận triển khai thực tế, không chỉ kiểm tra cú pháp hoặc cấu hình tĩnh.
 - **Kết quả:** ThingsBoard trả `connectRc=0`, publish trả `rc=0` và nhận `PUBACK`; Digital Twin xác minh đủ `lamp-01`, `lamp-02`, `lamp-03` rồi nhận `PUBACK mid=1` từ Cloud. MQTT nội bộ cổng 1883 và Node-RED cổng 1880 đều truy cập được; kiểm tra cú pháp đạt và 10/10 kiểm thử Python đạt.
+
+### 2026-10-22 16:10:33 +07:00
+
+- **Nội dung:** Khởi tạo Git repository với nhánh `main` và tải mã nguồn dự án lên `https://github.com/Greenbutter2510/IOT-digital-twin-n-ng` bằng commit đầu tiên `2326117`.
+  **Lý do:** Lưu trữ tập trung firmware ESP32, Digital Twin server, Node-RED flow, giao diện 3D, cấu hình mẫu, tài liệu và kiểm thử để có thể sao chép/triển khai trên máy khác.
+- **Nội dung:** Mở rộng `.gitignore` để loại trừ `.env`, `include/secrets.h`, access token, database, log, `.venv`, `.pio`, `node_modules`, cache Python, bản sao lưu và credential/runtime Node-RED.
+  **Lý do:** Không đưa bí mật hoặc file sinh tự động lên repository công khai, đồng thời giữ repository gọn và có thể tái tạo từ các file cấu hình mẫu.
+- **Kết quả:** Push nhánh `main` thành công; kiểm tra staging không tìm thấy device token hoặc Wokwi license. 10/10 kiểm thử Python đạt, `diagram.json` và `node_red_flow.json` hợp lệ, `settings.js` vượt qua `node --check`.
