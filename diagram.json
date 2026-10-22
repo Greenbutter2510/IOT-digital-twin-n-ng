@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "author": "B23DCAT013 - Nhom 4",
+  "editor": "wokwi",
+  "parts": [
+    
+    { "type": "wokwi-esp32-devkit-v1", "id": "esp", "top": -35, "left": -5, "attrs": { "env": "arduino" } },
+
+    { "type": "wokwi-photoresistor-sensor", "id": "lux", "top": -220, "left": -30, "attrs": { "lux": "80" } },
+    { "type": "wokwi-vcc", "id": "luxVcc", "top": -250, "left": 105, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "luxGnd", "top": -140, "left": 105, "attrs": {} },
+
+    { "type": "wokwi-led", "id": "led1", "top": -80, "left": -360, "attrs": { "color": "yellow", "label": "Lamp 01" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": -20, "left": -360, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-gnd", "id": "led1Gnd", "top": 55, "left": -360, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "ina1sim", "top": 95, "left": -390, "attrs": { "value": "250", "label": "SIM INA219 0x40" } },
+    { "type": "wokwi-vcc", "id": "ina1Vcc", "top": 75, "left": -300, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "ina1Gnd", "top": 210, "left": -390, "attrs": {} },
+    { "type": "wokwi-pushbutton", "id": "btn1", "top": 255, "left": -370, "attrs": { "color": "green", "label": "Lamp 01 Manual" } },
+    { "type": "wokwi-gnd", "id": "btn1Gnd", "top": 340, "left": -370, "attrs": {} },
+
+    { "type": "wokwi-led", "id": "led2", "top": -80, "left": 310, "attrs": { "color": "orange", "label": "Lamp 02" } },
+    { "type": "wokwi-resistor", "id": "r2", "top": -20, "left": 310, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-gnd", "id": "led2Gnd", "top": 55, "left": 310, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "ina2sim", "top": 95, "left": 310, "attrs": { "value": "400", "label": "SIM INA219 0x41" } },
+    { "type": "wokwi-vcc", "id": "ina2Vcc", "top": 75, "left": 400, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "ina2Gnd", "top": 210, "left": 310, "attrs": {} },
+    { "type": "wokwi-pushbutton", "id": "btn2", "top": 255, "left": 320, "attrs": { "color": "blue", "label": "Lamp 02 Manual" } },
+    { "type": "wokwi-gnd", "id": "btn2Gnd", "top": 340, "left": 320, "attrs": {} },
+
+    { "type": "wokwi-led", "id": "led3", "top": 390, "left": -25, "attrs": { "color": "red", "label": "Lamp 03" } },
+    { "type": "wokwi-resistor", "id": "r3", "top": 450, "left": -25, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-gnd", "id": "led3Gnd", "top": 525, "left": -25, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "ina3sim", "top": 390, "left": 145, "attrs": { "value": "550", "label": "SIM INA219 0x44" } },
+    { "type": "wokwi-vcc", "id": "ina3Vcc", "top": 370, "left": 235, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "ina3Gnd", "top": 505, "left": 145, "attrs": {} },
+    { "type": "wokwi-pushbutton", "id": "btn3", "top": 405, "left": -200, "attrs": { "color": "red", "label": "Lamp 03 Manual" } },
+    { "type": "wokwi-gnd", "id": "btn3Gnd", "top": 490, "left": -200, "attrs": {} }
+  ],
+  "connections": [
+    [ "luxVcc:VCC", "lux:VCC", "red", [] ],
+    [ "luxGnd:GND", "lux:GND", "black", [] ],
+    [ "esp:D34", "lux:AO", "green", [ "h-38", "v-130", "h-70" ] ],
+
+    [ "esp:D25", "led1:A", "yellow", [ "h-90", "v-45", "h-165" ] ],
+    [ "led1:C", "r1:1", "black", [] ],
+    [ "r1:2", "led1Gnd:GND", "black", [] ],
+    [ "ina1Vcc:VCC", "ina1sim:VCC", "red", [] ],
+    [ "ina1Gnd:GND", "ina1sim:GND", "black", [] ],
+    [ "esp:D35", "ina1sim:SIG", "blue", [ "h-62", "v155", "h-190" ] ],
+    [ "esp:D32", "btn1:1.l", "orange", [ "h-80", "v265", "h-190" ] ],
+    [ "btn1:2.l", "btn1Gnd:GND", "black", [] ],
+
+    [ "esp:D26", "led2:A", "orange", [ "h95", "v-25", "h125" ] ],
+    [ "led2:C", "r2:1", "black", [] ],
+    [ "r2:2", "led2Gnd:GND", "black", [] ],
+    [ "ina2Vcc:VCC", "ina2sim:VCC", "red", [] ],
+    [ "ina2Gnd:GND", "ina2sim:GND", "black", [] ],
+    [ "esp:VP", "ina2sim:SIG", "blue", [ "h60", "v175", "h150" ] ],
+    [ "esp:D33", "btn2:1.l", "orange", [ "h75", "v285", "h160" ] ],
+    [ "btn2:2.l", "btn2Gnd:GND", "black", [] ],
+
+    [ "esp:D27", "led3:A", "red", [ "h-40", "v375", "h35" ] ],
+    [ "led3:C", "r3:1", "black", [] ],
+    [ "r3:2", "led3Gnd:GND", "black", [] ],
+    [ "ina3Vcc:VCC", "ina3sim:VCC", "red", [] ],
+    [ "ina3Gnd:GND", "ina3sim:GND", "black", [] ],
+    [ "esp:VN", "ina3sim:SIG", "blue", [ "h40", "v345", "h65" ] ],
+    [ "esp:D18", "btn3:1.l", "orange", [ "h-25", "v330", "h-80" ] ],
+    [ "btn3:2.l", "btn3Gnd:GND", "black", [] ]
+  ],
+  "serialMonitor": { "display": "always", "newline": "lf" }
+}

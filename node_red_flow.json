@@ -1,0 +1,636 @@
+[
+  {
+    "id": "tab-digital-twin",
+    "type": "tab",
+    "label": "Digital Twin 3 Lamps",
+    "disabled": false,
+    "info": "Dashboard chỉ đọc snapshot do Python xác minh; lệnh gửi qua Python."
+  },
+  {
+    "id": "mqtt-verified",
+    "type": "mqtt in",
+    "z": "tab-digital-twin",
+    "name": "Verified telemetry only",
+    "topic": "city/digital-twin/verified/telemetry",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker-private",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 80,
+    "wires": [
+      [
+        "fn-snapshot"
+      ]
+    ]
+  },
+  {
+    "id": "fn-snapshot",
+    "type": "function",
+    "z": "tab-digital-twin",
+    "name": "Trạng thái đã xác minh",
+    "func": "const p=msg.payload; if (!p || !p.lamps) return null;\nconst ids=['lamp-01','lamp-02','lamp-03']; const ls=ids.map(id=>p.lamps[id]);\nconst fresh=ls.every(l=>l && l.available && !l.stale); const allAuto=fresh && ls.every(l=>l.mode==='AUTO'); const allManual=fresh && ls.every(l=>l.mode==='MANUAL');\nflow.set('allManual',allManual && !p.gatewayPending && !['TIMEOUT','TELEMETRY_TIMEOUT','REJECTED','PUBLISH_FAILED','INTERRUPTED','REQUEST_REJECTED'].includes(p.gatewayStatus)); flow.set('gatewayPending',!!p.gatewayPending);\nconst out=new Array(17).fill(null);\nout[0]={payload:p.luxValid?Number(p.lux):null};\nout[1]={payload:`${p.autoOffLux} lux (đã báo cáo) | AUTO ${allAuto?'BẬT':allManual?'TẮT':'KHÔNG XÁC ĐỊNH'} | ${p.gatewayPending?'ĐANG CHỜ ACK':p.gatewayStatus||'IDLE'}${fresh?'':' | OFFLINE/STALE'}`};\nif (fresh && !p.gatewayPending && (allAuto || allManual)) out[2]={payload:allAuto};\nif (fresh && Number.isInteger(p.autoOffLux) && !p.gatewayPending) out[3]={payload:p.autoOffLux};\nls.forEach((l,i)=>{\n  const base=4+i*3;\n  out[base]={payload:l&&l.available?`${l.state} / ${l.mode}${l.stale?' / STALE':''}`:'OFFLINE / CHƯA CÓ DỮ LIỆU'};\n  out[base+1]={payload:l&&l.sensorValid&&!l.stale?Number(l.currentMa):null};\n  out[base+2]={payload:l&&l.sensorValid&&!l.stale?Number(l.voltageV):null};\n  if (allManual && flow.get('allManual')) out[13+i]={payload:l.state==='ON'};\n});\nout[16]={payload:p};\nreturn out;",
+    "outputs": 17,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 80,
+    "wires": [
+      [
+        "ui-lux"
+      ],
+      [
+        "ui-system"
+      ],
+      [
+        "switch-auto"
+      ],
+      [
+        "slider-threshold"
+      ],
+      [
+        "ui-state1"
+      ],
+      [
+        "ui-current1"
+      ],
+      [
+        "ui-voltage1"
+      ],
+      [
+        "ui-state2"
+      ],
+      [
+        "ui-current2"
+      ],
+      [
+        "ui-voltage2"
+      ],
+      [
+        "ui-state3"
+      ],
+      [
+        "ui-current3"
+      ],
+      [
+        "ui-voltage3"
+      ],
+      [
+        "switch-l1"
+      ],
+      [
+        "switch-l2"
+      ],
+      [
+        "switch-l3"
+      ],
+      [
+        "ui-tpl-classroom-3d"
+      ]
+    ]
+  },
+  {
+    "id": "ui-lux",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lux chung",
+    "group": "group-environment",
+    "order": 1,
+    "width": 6,
+    "height": 3,
+    "gtype": "gage",
+    "title": "BH1750 - Ánh sáng chung",
+    "label": "lux",
+    "format": "{{value | number:1}}",
+    "min": 0,
+    "max": "1000",
+    "colors": [
+      "#1e88e5",
+      "#fdd835",
+      "#e53935"
+    ],
+    "seg1": "100",
+    "seg2": "150",
+    "x": 730,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "ui-system",
+    "type": "ui_text",
+    "z": "tab-digital-twin",
+    "name": "AUTO và ngưỡng xác nhận",
+    "group": "group-environment",
+    "order": 2,
+    "width": 6,
+    "height": 2,
+    "label": "Hệ thống",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 730,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "switch-auto",
+    "type": "ui_switch",
+    "z": "tab-digital-twin",
+    "name": "AUTO chung",
+    "label": "AUTO cả 3 đèn",
+    "group": "group-environment",
+    "order": 3,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "auto",
+    "style": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "animate": false,
+    "x": 150,
+    "y": 480,
+    "wires": [
+      [
+        "cmd-auto"
+      ]
+    ]
+  },
+  {
+    "id": "slider-threshold",
+    "type": "ui_slider",
+    "z": "tab-digital-twin",
+    "name": "Ngưỡng tắt lux",
+    "label": "Tắt khi lux > ngưỡng",
+    "tooltip": "Không điều chỉnh PWM",
+    "group": "group-environment",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "outs": "end",
+    "topic": "threshold",
+    "min": 100,
+    "max": 1000,
+    "step": 10,
+    "x": 150,
+    "y": 520,
+    "wires": [
+      [
+        "cmd-threshold"
+      ]
+    ]
+  },
+  {
+    "id": "cmd-auto",
+    "type": "function",
+    "z": "tab-digital-twin",
+    "name": "Yêu cầu AUTO chung",
+    "func": "if (flow.get('gatewayPending')) return null; flow.set('allManual',false); msg.payload={scope:'gateway',action:msg.payload===true?'AUTO_ON':'AUTO_OFF'}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 420,
+    "y": 480,
+    "wires": [
+      [
+        "mqtt-command"
+      ]
+    ]
+  },
+  {
+    "id": "cmd-threshold",
+    "type": "function",
+    "z": "tab-digital-twin",
+    "name": "Yêu cầu ngưỡng",
+    "func": "if (flow.get('gatewayPending')) return null; const threshold=Number(msg.payload); if (!Number.isInteger(threshold)||threshold<100||threshold>1000||threshold%10) return null; flow.set('allManual',false); msg.payload={scope:'gateway',action:'SET_THRESHOLD',threshold}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 420,
+    "y": 520,
+    "wires": [
+      [
+        "mqtt-command"
+      ]
+    ]
+  },
+  {
+    "id": "ui-state1",
+    "type": "ui_text",
+    "z": "tab-digital-twin",
+    "group": "group-lamp1",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "name": "Lamp 01 state",
+    "label": "Trạng thái",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 730,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "ui-current1",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lamp 01 current",
+    "group": "group-lamp1",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Dòng L1",
+    "label": "mA",
+    "format": "{{value | number:1}}",
+    "min": 0,
+    "max": "1000",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "500",
+    "seg2": "800",
+    "x": 730,
+    "y": 150,
+    "wires": []
+  },
+  {
+    "id": "ui-voltage1",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lamp 01 voltage",
+    "group": "group-lamp1",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Áp L1",
+    "label": "V",
+    "format": "{{value | number:2}}",
+    "min": 0,
+    "max": "12",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "5.5",
+    "seg2": "9",
+    "x": 730,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "ui-state2",
+    "type": "ui_text",
+    "z": "tab-digital-twin",
+    "group": "group-lamp2",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "name": "Lamp 02 state",
+    "label": "Trạng thái",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 730,
+    "y": 210,
+    "wires": []
+  },
+  {
+    "id": "ui-current2",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lamp 02 current",
+    "group": "group-lamp2",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Dòng L2",
+    "label": "mA",
+    "format": "{{value | number:1}}",
+    "min": 0,
+    "max": "1000",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "500",
+    "seg2": "800",
+    "x": 730,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "ui-voltage2",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lamp 02 voltage",
+    "group": "group-lamp2",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Áp L2",
+    "label": "V",
+    "format": "{{value | number:2}}",
+    "min": 0,
+    "max": "12",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "5.5",
+    "seg2": "9",
+    "x": 730,
+    "y": 270,
+    "wires": []
+  },
+  {
+    "id": "ui-state3",
+    "type": "ui_text",
+    "z": "tab-digital-twin",
+    "group": "group-lamp3",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "name": "Lamp 03 state",
+    "label": "Trạng thái",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 730,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "ui-current3",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lamp 03 current",
+    "group": "group-lamp3",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Dòng L3",
+    "label": "mA",
+    "format": "{{value | number:1}}",
+    "min": 0,
+    "max": "1000",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "500",
+    "seg2": "800",
+    "x": 730,
+    "y": 330,
+    "wires": []
+  },
+  {
+    "id": "ui-voltage3",
+    "type": "ui_gauge",
+    "z": "tab-digital-twin",
+    "name": "Lamp 03 voltage",
+    "group": "group-lamp3",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Áp L3",
+    "label": "V",
+    "format": "{{value | number:2}}",
+    "min": 0,
+    "max": "12",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "5.5",
+    "seg2": "9",
+    "x": 730,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "switch-l1",
+    "type": "ui_switch",
+    "z": "tab-digital-twin",
+    "name": "L1 ON/OFF",
+    "label": "L1 (chỉ MANUAL)",
+    "group": "group-lamp1",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "lamp-01",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "animate": false,
+    "x": 150,
+    "y": 600,
+    "wires": [
+      [
+        "cmd-manual"
+      ]
+    ]
+  },
+  {
+    "id": "switch-l2",
+    "type": "ui_switch",
+    "z": "tab-digital-twin",
+    "name": "L2 ON/OFF",
+    "label": "L2 (chỉ MANUAL)",
+    "group": "group-lamp2",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "lamp-02",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "animate": false,
+    "x": 150,
+    "y": 640,
+    "wires": [
+      [
+        "cmd-manual"
+      ]
+    ]
+  },
+  {
+    "id": "switch-l3",
+    "type": "ui_switch",
+    "z": "tab-digital-twin",
+    "name": "L3 ON/OFF",
+    "label": "L3 (chỉ MANUAL)",
+    "group": "group-lamp3",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "lamp-03",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "animate": false,
+    "x": 150,
+    "y": 680,
+    "wires": [
+      [
+        "cmd-manual"
+      ]
+    ]
+  },
+  {
+    "id": "cmd-manual",
+    "type": "function",
+    "z": "tab-digital-twin",
+    "name": "Chỉ cho MANUAL đã xác nhận",
+    "func": "if (!flow.get('allManual') || !['lamp-01','lamp-02','lamp-03'].includes(msg.topic)) return null; msg.payload={deviceId:msg.topic,mode:'MANUAL',lamp:msg.payload===true?'ON':'OFF'}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 430,
+    "y": 640,
+    "wires": [
+      [
+        "mqtt-command"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-command",
+    "type": "mqtt out",
+    "z": "tab-digital-twin",
+    "name": "Yêu cầu qua Digital Twin",
+    "topic": "city/dashboard/command/request",
+    "qos": "1",
+    "retain": "false",
+    "broker": "broker-private",
+    "x": 700,
+    "y": 530,
+    "wires": []
+  },
+  {
+    "id": "broker-private",
+    "type": "mqtt-broker",
+    "name": "Private/local MQTT",
+    "broker": "127.0.0.1",
+    "port": "1883",
+    "clientid": "node-red-digital-twin-dashboard",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": ""
+  },
+  {
+    "id": "ui-tab",
+    "type": "ui_tab",
+    "name": "Digital Twin 3 Lamps",
+    "icon": "dashboard",
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "group-environment",
+    "type": "ui_group",
+    "name": "Môi trường và AUTO",
+    "tab": "ui-tab",
+    "order": 2,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "group-lamp1",
+    "type": "ui_group",
+    "name": "Lamp 01 / INA219 0x40",
+    "tab": "ui-tab",
+    "order": 3,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "group-lamp2",
+    "type": "ui_group",
+    "name": "Lamp 02 / INA219 0x41",
+    "tab": "ui-tab",
+    "order": 4,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "group-lamp3",
+    "type": "ui_group",
+    "name": "Lamp 03 / INA219 0x44",
+    "tab": "ui-tab",
+    "order": 5,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "group-classroom-3d",
+    "type": "ui_group",
+    "name": "Đèn đường 3D (chỉ quan sát)",
+    "tab": "ui-tab",
+    "order": 1,
+    "disp": true,
+    "width": "24",
+    "collapse": false
+  },
+  {
+    "id": "ui-tpl-classroom-3d",
+    "type": "ui_template",
+    "z": "tab-digital-twin",
+    "group": "group-classroom-3d",
+    "name": "Ba đèn đường 3D (chỉ quan sát)",
+    "order": 1,
+    "width": 24,
+    "height": 14,
+    "format": "<!-- Cảnh ba cột đèn đường: chỉ đọc snapshot telemetry đã xác minh. -->\r\n<style>\r\n  .dt-classroom-root {\r\n    font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;\r\n    background: #0f172a;\r\n    color: #f8fafc;\r\n    border-radius: 8px;\r\n    padding: 10px;\r\n    box-sizing: border-box;\r\n    width: 100%;\r\n  }\r\n  .dt-topbar {\r\n    display: flex;\r\n    flex-wrap: wrap;\r\n    gap: 6px;\r\n    align-items: center;\r\n    justify-content: space-between;\r\n    margin-bottom: 8px;\r\n  }\r\n  .dt-top-pill {\r\n    font-size: 12px;\r\n    padding: 4px 8px;\r\n    border-radius: 4px;\r\n    font-weight: 600;\r\n    background: #1e293b;\r\n    border: 1px solid #334155;\r\n  }\r\n  .dt-pill-ok { border-color: #10b981; color: #a7f3d0; }\r\n  .dt-pill-warn { border-color: #f59e0b; color: #fde68a; background: #451a03; }\r\n  .dt-pill-auto { border-color: #38bdf8; color: #bae6fd; }\r\n  .dt-pill-manual { border-color: #a855f7; color: #e9d5ff; }\r\n  .dt-pill-mixed { border-color: #ef4444; color: #fecaca; background: #450a0a; }\r\n\r\n  .dt-gateway-banner {\r\n    font-size: 12px;\r\n    padding: 6px 10px;\r\n    border-radius: 5px;\r\n    margin-bottom: 8px;\r\n    font-weight: 600;\r\n  }\r\n  .dt-banner-ok { background: #064e3b; color: #d1fae5; border: 1px solid #059669; }\r\n  .dt-banner-pending { background: #78350f; color: #fef3c7; border: 1px solid #f59e0b; }\r\n  .dt-banner-err { background: #7f1d1d; color: #fee2e2; border: 1px solid #ef4444; }\r\n\r\n  .dt-viewport-wrap {\r\n    position: relative;\r\n    width: 100%;\r\n    height: 320px;\r\n    background: #161b22;\r\n    border-radius: 6px;\r\n    border: 1px solid #334155;\r\n    overflow: hidden;\r\n    margin-bottom: 10px;\r\n  }\r\n  .dt-webgl-host { width: 100%; height: 100%; touch-action: none; }\r\n  .dt-loading-overlay {\r\n    position: absolute;\r\n    inset: 0;\r\n    display: flex;\r\n    align-items: center;\r\n    justify-content: center;\r\n    background: rgba(15, 23, 42, 0.85);\r\n    font-size: 13px;\r\n    font-weight: 600;\r\n  }\r\n  .dt-cam-toolbar {\r\n    position: absolute;\r\n    top: 8px;\r\n    right: 8px;\r\n    display: flex;\r\n    gap: 6px;\r\n    z-index: 5;\r\n  }\r\n  .dt-cam-btn {\r\n    background: rgba(15, 23, 42, 0.85);\r\n    color: #e2e8f0;\r\n    border: 1px solid #475569;\r\n    border-radius: 4px;\r\n    padding: 4px 8px;\r\n    font-size: 11px;\r\n    cursor: pointer;\r\n  }\r\n  .dt-cam-btn:hover { border-color: #38bdf8; }\r\n  .dt-viewport-hint {\r\n    position: absolute;\r\n    bottom: 6px;\r\n    left: 8px;\r\n    right: 8px;\r\n    font-size: 11px;\r\n    color: #94a3b8;\r\n    background: rgba(15, 23, 42, 0.78);\r\n    padding: 3px 7px;\r\n    border-radius: 4px;\r\n    pointer-events: none;\r\n  }\r\n\r\n  .dt-lamp-cards {\r\n    display: grid;\r\n    grid-template-columns: repeat(3, 1fr);\r\n    gap: 8px;\r\n    margin-bottom: 10px;\r\n  }\r\n  .dt-lamp-card {\r\n    background: #1e293b;\r\n    color: #f8fafc;\r\n    border: 2px solid #334155;\r\n    border-radius: 6px;\r\n    padding: 8px;\r\n    text-align: left;\r\n    cursor: pointer;\r\n  }\r\n  .dt-card-selected { border-color: #38bdf8; background: #0f172a; }\r\n  .dt-card-degraded {\r\n    border-color: #f59e0b;\r\n    background-image: repeating-linear-gradient(\r\n      -45deg,\r\n      rgba(245, 158, 11, 0.08),\r\n      rgba(245, 158, 11, 0.08) 8px,\r\n      transparent 8px,\r\n      transparent 16px\r\n    );\r\n  }\r\n  .dt-card-head {\r\n    display: flex;\r\n    justify-content: space-between;\r\n    align-items: center;\r\n    font-size: 12px;\r\n    margin-bottom: 6px;\r\n  }\r\n  .dt-card-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }\r\n  .dt-badge {\r\n    font-size: 11px;\r\n    padding: 2px 6px;\r\n    border-radius: 4px;\r\n    font-weight: 700;\r\n  }\r\n  .dt-b-on { background: #854d0e; color: #fef08a; }\r\n  .dt-b-off { background: #334155; color: #cbd5e1; }\r\n  .dt-b-mode { background: #1e3a8a; color: #bfdbfe; }\r\n  .dt-b-online { background: #065f46; color: #a7f3d0; }\r\n  .dt-b-stale { background: #92400e; color: #fde68a; }\r\n  .dt-b-offline { background: #7f1d1d; color: #fecaca; }\r\n  .dt-card-metrics {\r\n    display: flex;\r\n    justify-content: space-between;\r\n    font-size: 11px;\r\n    color: #cbd5e1;\r\n  }\r\n\r\n  .dt-detail-pane {\r\n    background: #1e293b;\r\n    border: 1px solid #334155;\r\n    border-radius: 6px;\r\n    padding: 10px;\r\n    font-size: 12px;\r\n  }\r\n  .dt-detail-header {\r\n    display: flex;\r\n    justify-content: space-between;\r\n    align-items: center;\r\n    padding-bottom: 6px;\r\n    margin-bottom: 8px;\r\n    border-bottom: 1px solid #334155;\r\n  }\r\n  .dt-stale-overlay-note {\r\n    background: #451a03;\r\n    border: 1px solid #f59e0b;\r\n    color: #fde68a;\r\n    padding: 6px 8px;\r\n    border-radius: 4px;\r\n    margin-bottom: 8px;\r\n  }\r\n  .dt-pending-overlay-note {\r\n    background: #1e3a8a;\r\n    border: 1px solid #38bdf8;\r\n    color: #bae6fd;\r\n    padding: 6px 8px;\r\n    border-radius: 4px;\r\n    margin-bottom: 8px;\r\n  }\r\n  .dt-detail-grid {\r\n    display: grid;\r\n    grid-template-columns: repeat(2, 1fr);\r\n    gap: 6px 12px;\r\n  }\r\n  .dt-detail-item {\r\n    display: flex;\r\n    justify-content: space-between;\r\n    background: #0f172a;\r\n    padding: 5px 8px;\r\n    border-radius: 4px;\r\n  }\r\n\r\n  /* Tối ưu cho màn hình điện thoại ~400px */\r\n  @media (max-width: 540px) {\r\n    .dt-viewport-wrap { height: 250px; }\r\n    .dt-lamp-cards { grid-template-columns: 1fr; }\r\n    .dt-detail-grid { grid-template-columns: 1fr; }\r\n  }\r\n</style>\r\n\r\n<div id=\"dt-classroom-container\" class=\"dt-classroom-root\">\r\n  <!-- Thanh thông tin cảm biến Lux chung & Chế độ hệ thống -->\r\n  <div class=\"dt-topbar\">\r\n    <span class=\"dt-top-pill dt-lux-badge\">☀️ BH1750: Đang chờ dữ liệu...</span>\r\n    <span class=\"dt-top-pill dt-threshold-badge\">🎚️ Ngưỡng T: 150 lx (Bật &lt; 100 lx | Tắt &gt; 150 lx)</span>\r\n    <span class=\"dt-top-pill dt-mode-badge\">⏳ Chế độ: Đang đồng bộ...</span>\r\n  </div>\r\n\r\n  <!-- Banner trạng thái xác minh Gateway / ACK -->\r\n  <div class=\"dt-gateway-banner dt-banner-ok\">\r\n    🛡️ Đang chờ snapshot đã xác minh từ topic <code>city/digital-twin/verified/telemetry</code>...\r\n  </div>\r\n\r\n  <!-- Đoạn đường 3D hoặc sơ đồ 2D dự phòng -->\r\n  <div class=\"dt-viewport-wrap\">\r\n    <div class=\"dt-cam-toolbar\">\r\n      <button type=\"button\" class=\"dt-cam-btn dt-btn-reset-cam\">🎥 Đặt lại góc nhìn</button>\r\n      <button type=\"button\" class=\"dt-cam-btn dt-btn-toggle-2d\">📐 Chuyển sang 2D</button>\r\n    </div>\r\n    <div class=\"dt-webgl-host\"></div>\r\n    <div class=\"dt-fallback-2d\" style=\"display:none; padding:10px;\">\r\n      <div class=\"dt-2d-reason\" style=\"font-size:11px; color:#fde68a; margin-bottom:6px;\"></div>\r\n      <div class=\"dt-2d-svg-wrap\"></div>\r\n    </div>\r\n    <div class=\"dt-loading-overlay\">⏳ Đang dựng đoạn đường và ba cột đèn...</div>\r\n    <div class=\"dt-viewport-hint\">\r\n      Ba cột tương ứng L1–L3 · Ánh sáng biểu diễn ON/OFF, không phải mức PWM. Chọn cột để xem dữ liệu.\r\n    </div>\r\n  </div>\r\n\r\n  <!-- Ba thẻ trạng thái cột đèn L1, L2, L3 -->\r\n  <div class=\"dt-lamp-cards\"></div>\r\n\r\n  <!-- Bảng thông số chi tiết của đèn đang chọn -->\r\n  <div class=\"dt-detail-pane\"></div>\r\n</div>\r\n\r\n<script>\r\n(function(scope) {\r\n  var twinInstance = null;\r\n  var destroyed = false;\r\n  var bootstrapTimer;\r\n\r\n  function showLoadError(message) {\r\n    var root = document.getElementById('dt-classroom-container');\r\n    var overlay = root && root.querySelector('.dt-loading-overlay');\r\n    if (overlay && !destroyed) overlay.textContent = '⚠️ ' + message + ' Kiểm tra httpStatic và tải lại trang.';\r\n  }\r\n\r\n  function loadLocalScriptOnce(src, callback) {\r\n    var selector = 'script[data-dt-script=\"' + src + '\"]';\r\n    var script = document.querySelector(selector);\r\n    if (script && script.getAttribute('data-loaded') === 'error') {\r\n      script.parentNode.removeChild(script);\r\n      script = null;\r\n    }\r\n    if (!script) {\r\n      script = document.createElement('script');\r\n      script.src = src;\r\n      script.async = true;\r\n      script.setAttribute('data-dt-script', src);\r\n      script.addEventListener('load', function() { script.setAttribute('data-loaded', 'true'); });\r\n      script.addEventListener('error', function() { script.setAttribute('data-loaded', 'error'); });\r\n      document.head.appendChild(script);\r\n    }\r\n    if (script.getAttribute('data-loaded') === 'true') { callback(null); return; }\r\n    var onLoad = function() { cleanup(); callback(null); };\r\n    var onError = function() { cleanup(); callback(src); };\r\n    function cleanup() {\r\n      script.removeEventListener('load', onLoad);\r\n      script.removeEventListener('error', onError);\r\n    }\r\n    script.addEventListener('load', onLoad);\r\n    script.addEventListener('error', onError);\r\n  }\r\n\r\n  function bootstrapScene() {\r\n    var rootEl = document.getElementById('dt-classroom-container');\r\n    if (!rootEl || twinInstance || destroyed) return;\r\n    loadLocalScriptOnce('/static/vendor/three.min.js', function(error) {\r\n      if (destroyed) return;\r\n      if (error) { showLoadError('Không tải được ' + error); return; }\r\n      loadLocalScriptOnce('/static/classroom_twin_3d.js', function(secondError) {\r\n        if (destroyed) return;\r\n        if (secondError || !window.ClassroomTwinApp) {\r\n          showLoadError('Không tải được mô hình đèn đường 3D.');\r\n          return;\r\n        }\r\n        twinInstance = new window.ClassroomTwinApp(rootEl);\r\n        if (scope.msg && scope.msg.payload && scope.msg.payload.lamps) {\r\n          twinInstance.applyVerifiedSnapshot(scope.msg.payload);\r\n        }\r\n      });\r\n    });\r\n  }\r\n\r\n  // Chỉ nhận nhánh snapshot đã xác minh của flow chính; widget này không phát lệnh.\r\n  var unwatch = scope.$watch('msg', function(newMsg) {\r\n    if (newMsg && newMsg.payload && newMsg.payload.lamps && twinInstance) {\r\n      twinInstance.applyVerifiedSnapshot(newMsg.payload);\r\n    }\r\n  });\r\n\r\n  scope.$on('$destroy', function() {\r\n    destroyed = true;\r\n    clearTimeout(bootstrapTimer);\r\n    if (unwatch) unwatch();\r\n    if (twinInstance) twinInstance.dispose();\r\n    twinInstance = null;\r\n  });\r\n\r\n  bootstrapTimer = setTimeout(bootstrapScene, 60);\r\n})(scope);\r\n</script>",
+    "storeOutMessages": false,
+    "fwdInMessages": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "dt-classroom-widget",
+    "x": 740,
+    "y": 760,
+    "wires": [
+      []
+    ]
+  }
+]

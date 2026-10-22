@@ -1,0 +1,9 @@
+[wokwi]
+version = 1
+firmware = '.pio/build/wokwi/firmware.bin'
+elf = '.pio/build/wokwi/firmware.elf'
+rfc2217ServerPort = 4000
+
+[serialMonitor]
+convertEol = true
+display = "always"
